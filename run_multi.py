@@ -209,11 +209,13 @@ def login_instagram(page, ig_config: dict):
         page.wait_for_timeout(5000)
         tab_2fa.close()
 
-    # Пропускаем "Save login info" если появится
+    # Нажимаем "Сохранить данные" если появится диалог
+    page.wait_for_timeout(2000)
     try:
-        not_now = page.locator('button:has-text("Not Now"), button:has-text("Сейчас нет")')
-        if not_now.count() > 0:
-            not_now.first.click(timeout=3000)
+        save_btn = page.locator('button:has-text("Сохранить данные"), button:has-text("Save info"), button:has-text("Save")')
+        if save_btn.count() > 0:
+            save_btn.first.click(timeout=3000)
+            print("  Login info saved")
             page.wait_for_timeout(1000)
     except Exception:
         pass
