@@ -6,6 +6,7 @@ import os
 import json
 from playwright.sync_api import sync_playwright
 from geo import detect_all_accounts
+from auth import login_instagram
 
 BINARY = os.path.expanduser("~/.cloakbrowser/chromium-146.0.7680.177.5/chrome.exe")
 PROFILE_DIR = os.path.join(os.path.dirname(__file__), "profiles")
@@ -88,7 +89,11 @@ def start_session(account: dict, skip_login: bool = False, test_url: str = None)
             print(f"  Page loaded: {page.title()}")
         elif not skip_login and ig.get("login") and ig.get("password"):
             print(f"  Логин в Instagram как {ig['login']}...")
-            login_instagram(page, ig)
+            success = login_instagram(page, ig)
+            if success:
+                print(f"  Login successful!")
+            else:
+                print(f"  Login failed")
         else:
             print(f"  Opening Instagram...")
             page.goto("https://www.instagram.com/", timeout=60000, wait_until="domcontentloaded")
@@ -102,135 +107,6 @@ def start_session(account: dict, skip_login: bool = False, test_url: str = None)
         ctx.close()
         browser.close()
         print(f"  Завершено.")
-
-
-def login_instagram(page, ig_config: dict):
-    """Логин в Instagram с поддержкой 2FA через 2fa.fb.tools."""
-    context = page.context
-
-    # --- Логин ---
-    print("  Opening Instagram login page...")
-    page.goto("https://www.instagram.com/accounts/login/", timeout=60000, wait_until="domcontentloaded")
-    page.wait_for_timeout(3000)
-
-    # Принимаем cookie если появился диалог
-    try:
-        cookie_btn = page.locator('button:has-text("Allow"), button:has-text("Accept"), button:has-text("Allow All Cookies"), button:has-text("Принять")')
-        if cookie_btn.count() > 0:
-            cookie_btn.first.click(timeout=3000)
-            page.wait_for_timeout(1000)
-    except Exception:
-        pass
-
-    # Ждем загрузки формы логина
-    print("  Waiting for login form...")
-    username_input = page.locator('input[name="email"]')
-    username_input.wait_for(state="visible", timeout=15000)
-
-    # Вводим логин
-    username_input.click()
-    page.wait_for_timeout(300)
-    username_input.fill(ig_config["login"])
-    page.wait_for_timeout(500)
-
-    # Вводим пароль
-    pass_input = page.locator('input[name="pass"]')
-    pass_input.click()
-    page.wait_for_timeout(300)
-    pass_input.fill(ig_config["password"])
-    page.wait_for_timeout(1000)
-
-    # Отправляем форму через Enter
-    print("  Submitting login...")
-    pass_input.press("Enter")
-
-    # Ждем пока URL сменится (до 15 секунд)
-    print("  Waiting for redirect...")
-    for i in range(15):
-        page.wait_for_timeout(1000)
-        current_url = page.url
-        if "two_step_verification" in current_url:
-            print(f"  2FA page detected!")
-            break
-        elif "login" not in current_url:
-            print(f"  Login successful!")
-            return
-    else:
-        print(f"  URL still: {page.url}")
-
-    # --- 2FA через 2fa.fb.tools ---
-    if "two_step_verification" in page.url and ig_config.get("totp_secret"):
-        print("  Opening 2fa.fb.tools in new tab...")
-
-        # Ждем загрузки формы 2FA
-        totp_input = page.locator('form input[type="text"]').first
-        totp_input.wait_for(state="visible", timeout=10000)
-
-        # Открываем вторую вкладку
-        tab_2fa = context.new_page()
-        tab_2fa.goto("https://2fa.fb.tools/", timeout=30000, wait_until="domcontentloaded")
-        tab_2fa.wait_for_timeout(3000)
-
-        # Вводим секрет
-        secret_input = tab_2fa.locator('input[type="text"]').first
-        secret_input.fill(ig_config["totp_secret"])
-        tab_2fa.wait_for_timeout(1000)
-
-        # Нажимаем кнопку генерации
-        try:
-            generate_btn = tab_2fa.locator('button:has-text("Get Code"), button:has-text("Generate"), button[type="submit"]')
-            if generate_btn.count() > 0:
-                generate_btn.first.click()
-                tab_2fa.wait_for_timeout(3000)
-        except Exception:
-            pass
-
-        # Получаем сгенерированный код
-        code = ""
-        try:
-            body_text = tab_2fa.locator('body').text_content()
-            import re
-            match = re.search(r'\b\d{6}\b', body_text)
-            if match:
-                code = match.group(0)
-        except Exception as e:
-            print(f"  Error extracting code: {e}")
-
-        if code:
-            print(f"  2FA code: {code}")
-        else:
-            print("  Could not extract code automatically.")
-            code = input("  Enter 2FA code manually: ").strip()
-
-        # Вводим код и отправляем
-        totp_input.fill(code)
-        page.wait_for_timeout(500)
-        totp_input.press("Enter")
-        page.wait_for_timeout(5000)
-        tab_2fa.close()
-
-    # Диалог "Сохранить данные для входа?" — нажимаем кнопку сохранения
-    page.wait_for_timeout(2000)
-    try:
-        save_btn = page.locator('section button[type="button"]')
-        if save_btn.count() > 0:
-            save_btn.first.click(timeout=3000)
-            print("  Login info saved")
-            page.wait_for_timeout(1000)
-    except Exception:
-        pass
-
-    # Диалог "Включить уведомления?" — кнопка с классом _asz1
-    try:
-        notif_btn = page.locator('button._asz1')
-        notif_btn.wait_for(state="visible", timeout=3000)
-        notif_btn.click()
-        print("  Notifications enabled")
-        page.wait_for_timeout(1000)
-    except Exception:
-        pass
-
-    print(f"  Final URL: {page.url}")
 
 
 if __name__ == "__main__":
