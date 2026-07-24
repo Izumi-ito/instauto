@@ -212,8 +212,8 @@ def login_instagram(page, ig_config: dict):
     # Диалог "Сохранить данные для входа?" — нажимаем кнопку сохранения
     page.wait_for_timeout(2000)
     try:
-        # Кнопка "Сохранить данные" — единственный button[type="button"] в section
-        save_btn = page.locator('section button[type="button"]')
+        # Кнопка внутри модального диалога
+        save_btn = page.locator('div[role="dialog"] section button[type="button"]')
         if save_btn.count() > 0:
             save_btn.first.click(timeout=3000)
             print("  Login info saved")
@@ -221,10 +221,9 @@ def login_instagram(page, ig_config: dict):
     except Exception:
         pass
 
-    # Диалог "Включить уведомления?" — нажимаем "Включить" (первая кнопка)
+    # Диалог "Включить уведомления?" — кнопка "Включить" (класс _asz1)
     try:
-        # Кнопки уведомлений имеют класс _a9--, первая — "Включить"
-        notif_btn = page.locator('._a9-z button:first-child')
+        notif_btn = page.locator('button._asz1')
         if notif_btn.count() > 0:
             notif_btn.first.click(timeout=3000)
             print("  Notifications enabled")
