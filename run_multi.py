@@ -220,15 +220,13 @@ def login_instagram(page, ig_config: dict):
     except Exception:
         pass
 
-    # Диалог "Включить уведомления?" — первая кнопка в диалоге
+    # Диалог "Включить уведомления?" — кнопка с классом _asz1
     try:
-        dialog = page.locator('div[role="dialog"]')
-        if dialog.count() > 0:
-            first_btn = dialog.first.locator('button').first
-            if first_btn.count() > 0:
-                first_btn.click(timeout=3000)
-                print("  Notifications enabled")
-                page.wait_for_timeout(1000)
+        notif_btn = page.locator('button._asz1')
+        notif_btn.wait_for(state="visible", timeout=3000)
+        notif_btn.click()
+        print("  Notifications enabled")
+        page.wait_for_timeout(1000)
     except Exception:
         pass
 
