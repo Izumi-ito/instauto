@@ -220,6 +220,16 @@ def login_instagram(page, ig_config: dict):
     except Exception:
         pass
 
+    # Отклоняем уведомления ("Не сейчас")
+    try:
+        not_now_btn = page.locator('button:has-text("Не сейчас"), button:has-text("Not Now")')
+        if not_now_btn.count() > 0:
+            not_now_btn.first.click(timeout=3000)
+            print("  Notifications dismissed")
+            page.wait_for_timeout(1000)
+    except Exception:
+        pass
+
     print(f"  Final URL: {page.url}")
 
 
