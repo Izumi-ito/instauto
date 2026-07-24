@@ -209,10 +209,11 @@ def login_instagram(page, ig_config: dict):
         page.wait_for_timeout(5000)
         tab_2fa.close()
 
-    # Нажимаем "Сохранить данные" если появится диалог
+    # Диалог "Сохранить данные для входа?" — нажимаем кнопку сохранения
     page.wait_for_timeout(2000)
     try:
-        save_btn = page.locator('button:has-text("Сохранить данные"), button:has-text("Save info"), button:has-text("Save")')
+        # Кнопка "Сохранить данные" — единственный button[type="button"] в section
+        save_btn = page.locator('section button[type="button"]')
         if save_btn.count() > 0:
             save_btn.first.click(timeout=3000)
             print("  Login info saved")
@@ -220,12 +221,13 @@ def login_instagram(page, ig_config: dict):
     except Exception:
         pass
 
-    # Отклоняем уведомления ("Не сейчас")
+    # Диалог "Включить уведомления?" — нажимаем "Включить" (первая кнопка)
     try:
-        not_now_btn = page.locator('button:has-text("Не сейчас"), button:has-text("Not Now")')
-        if not_now_btn.count() > 0:
-            not_now_btn.first.click(timeout=3000)
-            print("  Notifications dismissed")
+        # Кнопки уведомлений имеют класс _a9--, первая — "Включить"
+        notif_btn = page.locator('._a9-z button:first-child')
+        if notif_btn.count() > 0:
+            notif_btn.first.click(timeout=3000)
+            print("  Notifications enabled")
             page.wait_for_timeout(1000)
     except Exception:
         pass
